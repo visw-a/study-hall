@@ -9,8 +9,13 @@ account, no database to manage.
 - **Library** — quick-capture box (type, `Cmd/Ctrl+Enter`, done), ranked
   search with highlighted matches, filter by topic/tag/kind, full editor for
   any item.
+- **To-Dos** — a checklist view for actionable items, separate from notes:
+  add, check off, and see Open/Done at a glance. To-dos are still regular
+  library items underneath, so they get topics, tags, and search too.
 - **Topics** — folders with colors and per-topic counts, plus a "Review with
   Claude" button that sends everything in a topic to Claude as a prompt.
+  Use topics for anything you want to group by kind or theme — podcasts,
+  articles, ideas, businesses, whatever fits how you think.
 - **Dashboard** — item counts, what you added this week, how much is still
   unsorted, recent activity, and one-click prompts ("quiz me on this week").
 - **Claude sidebar** — one continuous chat. Nothing is filed automatically;

@@ -5,7 +5,9 @@ import { sendChat } from '../lib/claude.js'
 
 const StoreContext = createContext(null)
 
-const TOPIC_COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#14b8a6', '#f43f5e']
+// Kept within the app's black/white/navy palette: alternating navy and
+// gray shades so topics stay visually distinct without adding new hues.
+const TOPIC_COLORS = ['#17284f', '#3d3f47', '#3b5b8c', '#6a6d78', '#5c7cad', '#9497a2', '#7d9dc9', '#c1c3ca']
 
 export function StoreProvider({ children }) {
   const [items, setItems] = useState(() => store.getItems())
@@ -41,11 +43,19 @@ export function StoreProvider({ children }) {
       topicId,
       tags: input.tags && input.tags.length ? input.tags : suggestTags(text),
       autoFiled,
+      // Only meaningful for type 'todo'; harmless on other kinds.
+      done: input.type === 'todo' ? Boolean(input.done) : undefined,
       createdAt: now,
       updatedAt: now,
     }
     setItems((prev) => [item, ...prev])
     return item
+  }, [])
+
+  const toggleTodo = useCallback((id) => {
+    setItems((prev) =>
+      prev.map((it) => (it.id === id ? { ...it, done: !it.done, updatedAt: Date.now() } : it))
+    )
   }, [])
 
   const updateItem = useCallback((id, patch) => {
@@ -159,13 +169,13 @@ export function StoreProvider({ children }) {
 
   const value = useMemo(() => ({
     items, topics, chat, settings, chatLoading, chatError,
-    addItem, updateItem, deleteItem,
+    addItem, updateItem, deleteItem, toggleTodo,
     addTopic, updateTopic, deleteTopic,
     addChatMessage, updateChatMessage, saveMessageToLibrary,
     askClaude, clearChat,
     updateSettings,
     exportData, importData,
-  }), [items, topics, chat, settings, chatLoading, chatError, addItem, updateItem, deleteItem,
+  }), [items, topics, chat, settings, chatLoading, chatError, addItem, updateItem, deleteItem, toggleTodo,
       addTopic, updateTopic, deleteTopic, addChatMessage, updateChatMessage,
       saveMessageToLibrary, askClaude, clearChat, updateSettings, exportData, importData])
 

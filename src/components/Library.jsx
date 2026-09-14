@@ -43,6 +43,7 @@ export function Library() {
         <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)}>
           <option value="all">All kinds</option>
           <option value="note">Notes</option>
+          <option value="todo">To-dos</option>
           <option value="answer">Saved answers</option>
         </select>
       </div>

@@ -10,14 +10,16 @@ export function ItemCard({ item, topic, query, onOpen }) {
   return (
     <button className="item-card" onClick={() => onOpen(item)}>
       <div className="item-card-top">
-        <span className={`item-kind item-kind-${item.type}`}>{item.type === 'answer' ? 'Claude' : 'Note'}</span>
+        <span className={`item-kind item-kind-${item.type}`}>{kindLabel(item)}</span>
         {topic && (
           <span className="item-topic" style={{ '--topic-color': topic.color }}>
             {topic.name}
           </span>
         )}
       </div>
-      <h3><Highlighted text={item.title} query={query} /></h3>
+      <h3 className={item.type === 'todo' && item.done ? 'item-title-done' : ''}>
+        <Highlighted text={item.title} query={query} />
+      </h3>
       {item.content && (
         <p className="item-preview">
           <Highlighted text={truncate(item.content, 180)} query={query} />
@@ -33,6 +35,12 @@ export function ItemCard({ item, topic, query, onOpen }) {
       <div className="item-date">{formatDate(item.updatedAt)}</div>
     </button>
   )
+}
+
+export function kindLabel(item) {
+  if (item.type === 'answer') return 'Claude'
+  if (item.type === 'todo') return item.done ? 'To-do · Done' : 'To-do'
+  return 'Note'
 }
 
 function truncate(text, max) {

@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useStore } from '../store/StoreContext.jsx'
+import { kindLabel } from './ItemCard.jsx'
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -13,6 +14,7 @@ export function Dashboard() {
     const unsorted = items.filter((it) => it.topicId === 'unsorted')
     const savedAnswers = items.filter((it) => it.type === 'answer')
     const notes = items.filter((it) => it.type === 'note')
+    const openTodos = items.filter((it) => it.type === 'todo' && !it.done)
     const recent = [...items].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6)
 
     const perTopic = topics
@@ -20,7 +22,7 @@ export function Dashboard() {
       .map((t) => ({ topic: t, count: items.filter((it) => it.topicId === t.id).length }))
       .sort((a, b) => b.count - a.count)
 
-    return { addedThisWeek, unsorted, savedAnswers, notes, recent, perTopic }
+    return { addedThisWeek, unsorted, savedAnswers, notes, openTodos, recent, perTopic }
   }, [items, topics])
 
   function quizMe() {
@@ -48,6 +50,7 @@ export function Dashboard() {
       <div className="stat-grid">
         <StatTile label="Total items" value={items.length} />
         <StatTile label="Notes" value={stats.notes.length} />
+        <StatTile label="Open to-dos" value={stats.openTodos.length} />
         <StatTile label="Saved from Claude" value={stats.savedAnswers.length} />
         <StatTile label="Topics" value={topics.filter((t) => t.id !== 'unsorted').length} />
         <StatTile label="Added this week" value={stats.addedThisWeek.length} />
@@ -89,7 +92,7 @@ export function Dashboard() {
             <ul className="recent-list">
               {stats.recent.map((item) => (
                 <li key={item.id}>
-                  <span className={`item-kind item-kind-${item.type}`}>{item.type === 'answer' ? 'Claude' : 'Note'}</span>
+                  <span className={`item-kind item-kind-${item.type}`}>{kindLabel(item)}</span>
                   <span className="recent-title">{item.title}</span>
                   <span className="recent-date">{new Date(item.updatedAt).toLocaleDateString()}</span>
                 </li>

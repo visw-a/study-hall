@@ -5,9 +5,11 @@
 import { Library } from './components/Library.jsx'
 import { Topics } from './components/Topics.jsx'
 import { Dashboard } from './components/Dashboard.jsx'
+import { Todos } from './components/Todos.jsx'
 
 export const VIEWS = [
   { id: 'dashboard', label: 'Dashboard', icon: '▦', component: Dashboard },
+  { id: 'todos', label: 'To-Dos', icon: '☑', component: Todos },
   { id: 'library', label: 'Library', icon: '▣', component: Library },
   { id: 'topics', label: 'Topics', icon: '☷', component: Topics },
 ]

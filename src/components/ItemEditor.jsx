@@ -10,7 +10,13 @@ export function ItemEditor({ item, onClose }) {
 
   useEffect(() => {
     if (item) {
-      setDraft({ title: item.title, content: item.content, topicId: item.topicId, tags: (item.tags || []).join(', ') })
+      setDraft({
+        title: item.title,
+        content: item.content,
+        topicId: item.topicId,
+        tags: (item.tags || []).join(', '),
+        done: Boolean(item.done),
+      })
     } else {
       setDraft(null)
     }
@@ -24,6 +30,7 @@ export function ItemEditor({ item, onClose }) {
       content: draft.content,
       topicId: draft.topicId,
       tags: draft.tags.split(',').map((t) => t.trim()).filter(Boolean),
+      ...(item.type === 'todo' ? { done: draft.done } : {}),
     })
     onClose()
   }
@@ -39,7 +46,7 @@ export function ItemEditor({ item, onClose }) {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <span className={`item-kind item-kind-${item.type}`}>{item.type === 'answer' ? 'Saved Claude answer' : 'Note'}</span>
+          <span className={`item-kind item-kind-${item.type}`}>{headerLabel(item.type)}</span>
           <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
@@ -47,6 +54,17 @@ export function ItemEditor({ item, onClose }) {
           <div className="item-editor-question">
             <strong>Question asked:</strong> {item.question}
           </div>
+        )}
+
+        {item.type === 'todo' && (
+          <label className="item-editor-done">
+            <input
+              type="checkbox"
+              checked={draft.done}
+              onChange={(e) => setDraft({ ...draft, done: e.target.checked })}
+            />
+            Done
+          </label>
         )}
 
         <input
@@ -91,4 +109,10 @@ export function ItemEditor({ item, onClose }) {
       </div>
     </div>
   )
+}
+
+function headerLabel(type) {
+  if (type === 'answer') return 'Saved Claude answer'
+  if (type === 'todo') return 'To-do'
+  return 'Note'
 }
