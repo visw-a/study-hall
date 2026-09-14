@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useStore } from '../store/StoreContext.jsx'
-import { testApiKey } from '../lib/claude.js'
+import { testApiKey, MODELS } from '../lib/claude.js'
 
 export function Settings({ onClose }) {
   const { settings, updateSettings, exportData, importData } = useStore()
@@ -82,6 +82,16 @@ export function Settings({ onClose }) {
           </div>
           {testState === 'ok' && <div className="settings-status settings-status-ok">✓ Connected</div>}
           {testState?.error && <div className="settings-status settings-status-error">✕ {testState.error}</div>}
+
+          <label className="settings-model-label">
+            Model
+            <select value={settings.model} onChange={(e) => updateSettings({ model: e.target.value })}>
+              {MODELS.map((m) => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </select>
+          </label>
+          <p className="settings-hint">{MODELS.find((m) => m.id === settings.model)?.hint}</p>
         </section>
 
         <section className="settings-section">

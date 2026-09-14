@@ -59,11 +59,6 @@ export function Chat() {
             }}
           />
         ))}
-        {chatLoading && (
-          <div className="chat-bubble chat-bubble-assistant chat-thinking">
-            <span className="dot" /><span className="dot" /><span className="dot" />
-          </div>
-        )}
       </div>
 
       <div className="chat-input-row">
@@ -86,10 +81,16 @@ export function Chat() {
 
 function ChatBubble({ message, onSave }) {
   const isUser = message.role === 'user'
+  const isStreamingEmpty = !isUser && !message.content
+
   return (
     <div className={`chat-bubble ${isUser ? 'chat-bubble-user' : 'chat-bubble-assistant'}`}>
-      <div className="chat-bubble-text">{message.content}</div>
-      {!isUser && (
+      {isStreamingEmpty ? (
+        <div className="chat-thinking-dots"><span className="dot" /><span className="dot" /><span className="dot" /></div>
+      ) : (
+        <div className="chat-bubble-text">{message.content}</div>
+      )}
+      {!isUser && !isStreamingEmpty && (
         message.savedItemId ? (
           <span className="chat-saved-pill">✓ Saved to library</span>
         ) : (

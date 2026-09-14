@@ -29,6 +29,12 @@ account, no database to manage.
 - **Persistence** — everything lives in this browser's `localStorage` under
   `studyhall.v1.*` keys. Export/import JSON from Settings since browser
   storage isn't forever.
+- **Command palette (`Cmd/Ctrl+K`)** — jump straight to any view or any item
+  by title/content/tag from anywhere in the app, no clicking through nav.
+- **Installable / offline-capable** — a web app manifest + service worker
+  let you "Add to Home Screen" / install it like a native app, and it keeps
+  working after the first load even with no connection (the Claude chat
+  itself still needs a network for real API replies).
 
 ## Running it locally
 
@@ -45,11 +51,20 @@ With no API key set, the chat answers with clearly-labeled **offline**
 replies built from your own library — everything (including save-to-library)
 works with zero setup. To get real Claude answers, open **Settings**, paste
 an API key from [console.anthropic.com](https://console.anthropic.com/), and
-hit **Test connection**.
+hit **Test connection**. Replies stream in token-by-token, and you can pick
+the model (Haiku 4.5 for speed/cost, Sonnet 5 as the default, Opus 5 for the
+most capable synthesis) in Settings.
 
 The key is stored only in this browser's `localStorage` and sent directly to
-Anthropic's API from the page — it never touches a server of ours. Don't
-paste it in on a shared or public computer.
+Anthropic's API from the page via the official `@anthropic-ai/sdk`
+(`dangerouslyAllowBrowser: true` — there's no server of ours in between). It
+never touches a server of ours. Don't paste it in on a shared or public
+computer.
+
+Two entry points send Claude a ready-made prompt instead of a blank chat:
+**"Review with Claude"** on a Topics row summarizes everything filed there,
+and **"Ask Claude about this"** on any note/to-do editor asks Claude to go
+deeper on that one item.
 
 ## Deploying so it's always accessible
 
@@ -77,15 +92,19 @@ src/
     storage.js      # localStorage read/write + export/import
     categorize.js    # auto-categorization + tag suggestion (tested)
     search.js         # ranked search + highlighting (tested)
-    claude.js          # Claude API client + offline mock
+    claude.js          # Claude API client (streaming) + offline mock
   store/
     StoreContext.jsx  # all app state + actions, via React Context
   components/
-    Library.jsx, Topics.jsx, Dashboard.jsx  # the three main views
-    Chat.jsx           # Claude sidebar
+    Dashboard.jsx, Todos.jsx, Library.jsx, Topics.jsx  # the four main views
+    Chat.jsx                 # Claude sidebar (streaming replies)
+    CommandPalette.jsx       # Cmd/Ctrl+K — jump to a view or any item
     ItemEditor.jsx, QuickCapture.jsx, Settings.jsx, ErrorBoundary.jsx
   registry.js         # list of main views — add a new view here, not in App.jsx
   App.jsx
+
+public/
+  manifest.webmanifest, sw.js, icon-*.png   # installability + offline shell
 ```
 
 Adding a new feature as a fourth view means adding one entry to

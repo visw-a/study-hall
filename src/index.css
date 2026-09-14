@@ -17,7 +17,11 @@
   --danger: #0a0a0a;
   --danger-dim: #eceef2;
   --radius: 8px;
-  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  /* Aptos renders only for visitors who have it installed locally (Windows
+     11 / Microsoft 365 ship it — it isn't a distributable web font). Segoe
+     UI Variable/Segoe UI are its closest system relatives; Roboto (loaded
+     via Google Fonts) is the last-resort fallback everyone gets. */
+  font-family: 'Aptos', 'Segoe UI Variable', 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -76,6 +80,11 @@ h1, h2, h3 { margin: 0 0 0.5em 0; }
 }
 
 .app-nav-links { display: flex; gap: 4px; flex: 1; }
+
+.app-nav-kbd-hint {
+  font-size: 0.72rem; color: var(--text-dim); border: 1px solid var(--border);
+  border-radius: 6px; padding: 2px 6px; margin-right: 10px; user-select: none;
+}
 
 .app-nav-link {
   display: flex;
@@ -161,13 +170,13 @@ h1, h2, h3 { margin: 0 0 0.5em 0; }
 .chat-save-btn { margin-top: 6px; }
 .chat-saved-pill { display: inline-block; margin-top: 6px; font-size: 0.75rem; color: var(--text-dim); }
 
-.chat-thinking { display: flex; gap: 4px; align-items: center; }
-.chat-thinking .dot {
+.chat-thinking-dots { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
+.chat-thinking-dots .dot {
   width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim);
   animation: pulse 1s infinite ease-in-out;
 }
-.chat-thinking .dot:nth-child(2) { animation-delay: 0.15s; }
-.chat-thinking .dot:nth-child(3) { animation-delay: 0.3s; }
+.chat-thinking-dots .dot:nth-child(2) { animation-delay: 0.15s; }
+.chat-thinking-dots .dot:nth-child(3) { animation-delay: 0.3s; }
 @keyframes pulse { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
 
 .chat-input-row {
@@ -270,6 +279,44 @@ mark { background: var(--accent-dim); color: var(--accent); font-weight: 700; bo
 
 .empty-state { color: var(--text-dim); padding: 30px 0; text-align: center; }
 .empty-state.small { padding: 14px 0; text-align: left; }
+
+/* Command palette (⌘K) */
+.palette-backdrop {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45);
+  display: flex; align-items: flex-start; justify-content: center; z-index: 60;
+  padding: 12vh 20px 20px;
+}
+.palette {
+  background: var(--panel);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  width: min(560px, 100%);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.palette-input {
+  padding: 16px; border: none; border-bottom: 1px solid var(--border);
+  background: transparent; color: var(--text); font-size: 1rem;
+}
+.palette-input:focus { outline: none; }
+.palette-results { overflow-y: auto; padding: 6px; }
+.palette-empty { padding: 20px; color: var(--text-dim); text-align: center; font-size: 0.85rem; }
+.palette-row {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border: none; background: none; border-radius: var(--radius);
+  text-align: left; cursor: pointer; font-size: 0.88rem;
+}
+.palette-row.selected { background: var(--accent-dim); }
+.palette-row-icon { opacity: 0.8; }
+.palette-row-kind { font-size: 0.68rem; text-transform: uppercase; color: var(--text-dim); flex-shrink: 0; width: 46px; }
+.palette-row-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette-row-hint { color: var(--text-dim); font-size: 0.75rem; flex-shrink: 0; }
+.palette-footer {
+  padding: 8px 14px; border-top: 1px solid var(--border); color: var(--text-dim);
+  font-size: 0.72rem;
+}
 
 /* Modal (item editor / settings) */
 .modal-backdrop {
@@ -388,6 +435,14 @@ mark { background: var(--accent-dim); color: var(--accent); font-weight: 700; bo
 .settings-status { margin-top: 8px; font-size: 0.85rem; }
 .settings-status-ok { color: var(--accent); font-weight: 600; }
 .settings-status-error { color: var(--danger); }
+.settings-model-label {
+  display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-dim);
+  margin-top: 14px;
+}
+.settings-model-label select {
+  padding: 8px 10px; border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--panel-alt); color: var(--text);
+}
 
 /* Crash screen */
 .crash-screen { max-width: 600px; margin: 60px auto; padding: 20px; text-align: center; }

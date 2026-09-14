@@ -1,89 +1,92 @@
-// Claude chat integration.
+// Claude chat integration, via the official Anthropic SDK.
 //
 // With no API key, Study Hall answers with clearly-labeled offline replies
 // built from your own library (so save-to-library and the rest of the UI
 // are fully usable with zero setup). Paste a key in Settings to switch to
-// real Claude calls, made directly from the browser.
+// real, streamed Claude calls, made directly from the browser.
 //
 // SECURITY NOTE: the key is stored in this browser's localStorage and sent
-// straight to the Anthropic API from the page. That's fine for a personal,
-// single-user tool on a device you trust — don't paste your key in on a
-// shared or public computer, and don't share this page's URL alongside it
-// (the URL itself carries no key; each browser holds its own).
+// straight to the Anthropic API from the page (dangerouslyAllowBrowser is
+// required for exactly this reason — there's no server of ours in between).
+// That's fine for a personal, single-user tool on a device you trust — don't
+// paste your key in on a shared or public computer, and don't share this
+// page's URL alongside it (the URL itself carries no key; each browser holds
+// its own).
 
+import Anthropic from '@anthropic-ai/sdk'
 import { searchItems } from './search.js'
 
-const API_URL = 'https://api.anthropic.com/v1/messages'
-const ANTHROPIC_VERSION = '2023-06-01'
+export const MODELS = [
+  { id: 'claude-haiku-4-5', label: 'Haiku 4.5 — fastest, cheapest', hint: 'Good for quick questions and tagging.' },
+  { id: 'claude-sonnet-5', label: 'Sonnet 5 — balanced (default)', hint: 'Best default for everyday use.' },
+  { id: 'claude-opus-5', label: 'Opus 5 — most capable', hint: 'Best for synthesizing/reviewing a whole topic.' },
+]
+export const DEFAULT_MODEL = 'claude-sonnet-5'
+
+const SYSTEM_PROMPT =
+  'You are Claude, embedded as a study assistant inside "Study Hall", ' +
+  "the user's personal learning library of notes and to-dos. Help them " +
+  "organize notes, answer questions about what they've been learning, and " +
+  'keep answers concise and practical. When useful, suggest a short title ' +
+  'and 2-4 tags for turning the answer into a library item.'
+
+// One client per API key — recreated only when the key actually changes.
+let cachedClient = null
+let cachedKey = null
+
+function getClient(apiKey) {
+  if (!cachedClient || cachedKey !== apiKey) {
+    cachedClient = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
+    cachedKey = apiKey
+  }
+  return cachedClient
+}
 
 export async function testApiKey(apiKey, model) {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': ANTHROPIC_VERSION,
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 16,
-      messages: [{ role: 'user', content: 'Say "ok" and nothing else.' }],
-    }),
+  const client = getClient(apiKey)
+  await client.messages.create({
+    model,
+    max_tokens: 16,
+    messages: [{ role: 'user', content: 'Say "ok" and nothing else.' }],
   })
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new Error(`${res.status} ${res.statusText}: ${body.slice(0, 300)}`)
-  }
   return true
 }
 
 /**
- * Send a chat turn to Claude, or produce an offline mock reply.
+ * Stream a chat turn to Claude, calling onDelta(textSoFar) as tokens arrive
+ * so the UI can render the reply as it's generated. Falls back to a single
+ * offline reply (delivered as one onDelta call) when no API key is set.
+ *
  * @param {Array<{role:'user'|'assistant', content:string}>} history
  * @param {{apiKey:string, model:string}} settings
  * @param {Array} libraryItems - for offline mode / grounding
+ * @param {(textSoFar: string) => void} onDelta
+ * @returns {Promise<string>} the final reply text
  */
-export async function sendChat(history, settings, libraryItems) {
+export async function streamChat(history, settings, libraryItems, onDelta) {
   if (!settings.apiKey) {
-    return offlineReply(history, libraryItems)
+    const reply = offlineReply(history, libraryItems)
+    onDelta(reply)
+    return reply
   }
 
-  const system =
-    'You are Claude, embedded as a study assistant inside "Study Hall", ' +
-    "the user's personal learning library. Help them organize notes, " +
-    "answer questions about what they've been learning, and keep " +
-    'answers concise and practical.'
-
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': settings.apiKey,
-      'anthropic-version': ANTHROPIC_VERSION,
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: settings.model || 'claude-sonnet-5',
-      max_tokens: 1024,
-      system,
-      messages: history.map((m) => ({ role: m.role, content: m.content })),
-    }),
+  const client = getClient(settings.apiKey)
+  const stream = client.messages.stream({
+    model: settings.model || DEFAULT_MODEL,
+    max_tokens: 2048,
+    system: SYSTEM_PROMPT,
+    messages: history.map((m) => ({ role: m.role, content: m.content })),
   })
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new Error(`Claude request failed (${res.status}): ${body.slice(0, 300)}`)
+  let text = ''
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      text += event.delta.text
+      onDelta(text)
+    }
   }
 
-  const data = await res.json()
-  const text = (data.content || [])
-    .filter((block) => block.type === 'text')
-    .map((block) => block.text)
-    .join('\n')
-    .trim()
-
-  return text || '(empty response)'
+  return text.trim() || '(empty response)'
 }
 
 // --- Offline mock -----------------------------------------------------

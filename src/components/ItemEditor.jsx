@@ -5,7 +5,7 @@ import { useStore } from '../store/StoreContext.jsx'
 // dereferenced `item` on first render even when null, which blanked the
 // whole page. Guard stays explicit here as a reminder of why.
 export function ItemEditor({ item, onClose }) {
-  const { topics, updateItem, deleteItem } = useStore()
+  const { topics, updateItem, deleteItem, askClaude } = useStore()
   const [draft, setDraft] = useState(null)
 
   useEffect(() => {
@@ -40,6 +40,13 @@ export function ItemEditor({ item, onClose }) {
       deleteItem(item.id)
       onClose()
     }
+  }
+
+  function askAboutThis() {
+    const label = item.type === 'todo' ? 'to-do' : item.type === 'answer' ? 'saved answer' : 'note'
+    const body = item.content ? `\n\n${item.content}` : ''
+    askClaude(`About this ${label} — "${item.title}":${body}\n\nCan you help me go deeper on this?`)
+    onClose()
   }
 
   return (
@@ -102,6 +109,9 @@ export function ItemEditor({ item, onClose }) {
 
         <div className="modal-footer">
           <button className="btn-danger" onClick={remove}>Delete</button>
+          {item.type !== 'answer' && (
+            <button className="btn-secondary" onClick={askAboutThis}>Ask Claude about this</button>
+          )}
           <div className="modal-footer-spacer" />
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
           <button className="btn-primary" onClick={save}>Save</button>

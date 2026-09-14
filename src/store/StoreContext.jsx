@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { store, newId } from '../lib/storage.js'
 import { suggestTopic, suggestTags } from '../lib/categorize.js'
-import { sendChat } from '../lib/claude.js'
+import { streamChat, DEFAULT_MODEL } from '../lib/claude.js'
 
 const StoreContext = createContext(null)
 
@@ -133,19 +133,24 @@ export function StoreProvider({ children }) {
     // reading it back from localStorage here would silently return last
     // render's chat (missing the message we just sent).
     const userMessage = addChatMessage('user', trimmed)
+    // A placeholder bubble that fills in live as tokens stream in, rather
+    // than waiting for the whole reply — a real API call can take several
+    // seconds, and a blank sidebar until then feels broken.
+    const assistantMessage = addChatMessage('assistant', '')
     setChatLoading(true)
     setChatError(null)
     try {
       const history = [...chat, userMessage].map((m) => ({ role: m.role, content: m.content }))
-      const reply = await sendChat(history, settings, items)
-      addChatMessage('assistant', reply)
+      await streamChat(history, settings, items, (textSoFar) => {
+        updateChatMessage(assistantMessage.id, { content: textSoFar })
+      })
     } catch (err) {
       setChatError(err.message || String(err))
-      addChatMessage('assistant', `_Something went wrong talking to Claude: ${err.message || err}_`)
+      updateChatMessage(assistantMessage.id, { content: `_Something went wrong talking to Claude: ${err.message || err}_` })
     } finally {
       setChatLoading(false)
     }
-  }, [chatLoading, addChatMessage, chat, settings, items])
+  }, [chatLoading, addChatMessage, updateChatMessage, chat, settings, items])
 
   const clearChat = useCallback(() => setChat([]), [])
 
