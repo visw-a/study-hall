@@ -10,8 +10,26 @@ account, no database to manage.
   search with highlighted matches, filter by topic/tag/kind, full editor for
   any item.
 - **To-Dos** — a checklist view for actionable items, separate from notes:
-  add, check off, and see Open/Done at a glance. To-dos are still regular
-  library items underneath, so they get topics, tags, and search too.
+  add, check off, set a due date, and see Open/Done at a glance (open items
+  sort soonest-due-first). To-dos are still regular library items
+  underneath, so they get topics, tags, and search too.
+- **Due-date reminders** — a browser notification when a to-do's due date
+  arrives, opt-in from Settings. Best-effort only: this is a static,
+  backend-less site, so it can only fire while the app is open in a tab —
+  there's no server to push a notification after the tab is closed.
+- **Archive, not just delete** — every item's default "remove" action is
+  Archive (reversible, out of every view/count/search by default). Library's
+  header has an "Archived (N)" toggle to review, restore, or permanently
+  delete from there — permanent delete is never a single accidental click
+  from the main view.
+- **Claude-assisted categorization** — when a note lands in Unsorted (the
+  local heuristic wasn't confident), an "Ask Claude to suggest a topic"
+  button sends it to the sidebar chat for a recommendation.
+- **Expandable note editor** — the ⤢ Expand button (in quick-capture or any
+  item editor) opens a half-screen composer: markdown formatting shortcuts
+  (`⌘B`/`⌘I`/heading/list/code), and a "Reformat with Claude" button that
+  streams a cleaned-up version in place — built for pasting in messy Claude
+  output and turning it into a readable note, with one-click undo.
 - **Topics** — folders with colors and per-topic counts, plus a "Review with
   Claude" button that sends everything in a topic to Claude as a prompt.
   Use topics for anything you want to group by kind or theme — podcasts,
@@ -41,7 +59,7 @@ account, no database to manage.
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # unit tests (categorizer + search ranking)
+npm test          # unit tests (categorizer, search ranking, due dates)
 npm run build     # production build to dist/
 ```
 
@@ -92,13 +110,16 @@ src/
     storage.js      # localStorage read/write + export/import
     categorize.js    # auto-categorization + tag suggestion (tested)
     search.js         # ranked search + highlighting (tested)
-    claude.js          # Claude API client (streaming) + offline mock
+    dates.js            # due-date labeling: "Today"/"overdue"/etc (tested)
+    claude.js             # Claude API client (streaming) + offline mock
   store/
     StoreContext.jsx  # all app state + actions, via React Context
+    #   — archive/restore/delete, due-date reminder polling live here
   components/
     Dashboard.jsx, Todos.jsx, Library.jsx, Topics.jsx  # the four main views
     Chat.jsx                 # Claude sidebar (streaming replies)
     CommandPalette.jsx       # Cmd/Ctrl+K — jump to a view or any item
+    NoteComposer.jsx         # ⤢ Expand — half-screen editor + AI reformat
     ItemEditor.jsx, QuickCapture.jsx, Settings.jsx, ErrorBoundary.jsx
   registry.js         # list of main views — add a new view here, not in App.jsx
   App.jsx

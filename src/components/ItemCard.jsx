@@ -1,4 +1,5 @@
 import { highlight } from '../lib/search.js'
+import { describeDue } from '../lib/dates.js'
 
 function Highlighted({ text, query }) {
   const parts = highlight(text, query)
@@ -7,10 +8,12 @@ function Highlighted({ text, query }) {
 }
 
 export function ItemCard({ item, topic, query, onOpen }) {
+  const due = item.type === 'todo' && !item.done ? describeDue(item.dueAt) : null
   return (
     <button className="item-card" onClick={() => onOpen(item)}>
       <div className="item-card-top">
         <span className={`item-kind item-kind-${item.type}`}>{kindLabel(item)}</span>
+        {due && <span className={`todo-due${due.overdue ? ' todo-due-overdue' : ''}`}>{due.label}</span>}
         {topic && (
           <span className="item-topic" style={{ '--topic-color': topic.color }}>
             {topic.name}

@@ -4,16 +4,16 @@ import { ItemCard } from './ItemCard.jsx'
 import { ItemEditor } from './ItemEditor.jsx'
 
 export function Topics() {
-  const { items, topics, addTopic, deleteTopic, askClaude } = useStore()
+  const { activeItems, topics, addTopic, deleteTopic, askClaude } = useStore()
   const [newTopicName, setNewTopicName] = useState('')
   const [expanded, setExpanded] = useState(null)
   const [openItem, setOpenItem] = useState(null)
 
   const counts = useMemo(() => {
     const map = {}
-    for (const it of items) map[it.topicId] = (map[it.topicId] || 0) + 1
+    for (const it of activeItems) map[it.topicId] = (map[it.topicId] || 0) + 1
     return map
-  }, [items])
+  }, [activeItems])
 
   function createTopic() {
     if (!newTopicName.trim()) return
@@ -22,7 +22,7 @@ export function Topics() {
   }
 
   function reviewWithClaude(topic) {
-    const topicItems = items.filter((it) => it.topicId === topic.id)
+    const topicItems = activeItems.filter((it) => it.topicId === topic.id)
     if (topicItems.length === 0) return
     const summary = topicItems
       .slice(0, 25)
@@ -84,7 +84,7 @@ export function Topics() {
                     <div className="empty-state small">Nothing filed here yet.</div>
                   ) : (
                     <div className="item-grid">
-                      {items
+                      {activeItems
                         .filter((it) => it.topicId === topic.id)
                         .map((item) => (
                           <ItemCard key={item.id} item={item} topic={topic} query="" onOpen={setOpenItem} />

@@ -3,7 +3,7 @@ import { useStore } from '../store/StoreContext.jsx'
 import { testApiKey, MODELS } from '../lib/claude.js'
 
 export function Settings({ onClose }) {
-  const { settings, updateSettings, exportData, importData } = useStore()
+  const { settings, updateSettings, exportData, importData, reminderPermission, requestReminderPermission } = useStore()
   const [keyDraft, setKeyDraft] = useState(settings.apiKey)
   const [testState, setTestState] = useState(null) // 'testing' | 'ok' | { error }
   const fileInputRef = useRef(null)
@@ -92,6 +92,29 @@ export function Settings({ onClose }) {
             </select>
           </label>
           <p className="settings-hint">{MODELS.find((m) => m.id === settings.model)?.hint}</p>
+        </section>
+
+        <section className="settings-section">
+          <h3>To-do reminders</h3>
+          <p className="settings-hint">
+            Browser notifications for to-dos with a due date — best-effort only: this is a
+            plain static site with no server, so a reminder can only fire while Study Hall
+            is open in a tab (checked every 30 seconds), not after it's closed.
+          </p>
+          {reminderPermission === 'unsupported' && (
+            <div className="settings-status">Notifications aren't supported in this browser.</div>
+          )}
+          {reminderPermission === 'granted' && (
+            <div className="settings-status settings-status-ok">✓ Reminders enabled</div>
+          )}
+          {reminderPermission === 'denied' && (
+            <div className="settings-status settings-status-error">
+              Blocked — re-enable notifications for this site in your browser's settings.
+            </div>
+          )}
+          {reminderPermission === 'default' && (
+            <button className="btn-secondary" onClick={requestReminderPermission}>Enable reminders</button>
+          )}
         </section>
 
         <section className="settings-section">

@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../store/StoreContext.jsx'
+import { NoteComposer } from './NoteComposer.jsx'
 
 // Renders nothing while closed — an earlier version of this component
 // dereferenced `item` on first render even when null, which blanked the
 // whole page. Guard stays explicit here as a reminder of why.
 export function ItemEditor({ item, onClose }) {
-  const { topics, updateItem, deleteItem, askClaude } = useStore()
+  const { topics, updateItem, deleteItem, archiveItem, restoreItem, askClaude } = useStore()
   const [draft, setDraft] = useState(null)
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     if (item) {
@@ -16,10 +18,12 @@ export function ItemEditor({ item, onClose }) {
         topicId: item.topicId,
         tags: (item.tags || []).join(', '),
         done: Boolean(item.done),
+        dueAt: item.dueAt || null,
       })
     } else {
       setDraft(null)
     }
+    setExpanded(false)
   }, [item])
 
   if (!item || !draft) return null
@@ -30,13 +34,23 @@ export function ItemEditor({ item, onClose }) {
       content: draft.content,
       topicId: draft.topicId,
       tags: draft.tags.split(',').map((t) => t.trim()).filter(Boolean),
-      ...(item.type === 'todo' ? { done: draft.done } : {}),
+      ...(item.type === 'todo' ? { done: draft.done, dueAt: draft.dueAt } : {}),
     })
     onClose()
   }
 
-  function remove() {
-    if (window.confirm('Delete this item? This cannot be undone.')) {
+  function archive() {
+    archiveItem(item.id)
+    onClose()
+  }
+
+  function restore() {
+    restoreItem(item.id)
+    onClose()
+  }
+
+  function removePermanently() {
+    if (window.confirm('Delete this item permanently? This cannot be undone.')) {
       deleteItem(item.id)
       onClose()
     }
@@ -49,6 +63,28 @@ export function ItemEditor({ item, onClose }) {
     onClose()
   }
 
+  function askToCategorize() {
+    const topicNames = topics.filter((t) => t.id !== 'unsorted').map((t) => t.name)
+    const body = draft.content ? `\n\n${draft.content}` : ''
+    const list = topicNames.length ? topicNames.join(', ') : '(no topics yet — suggest a new one)'
+    askClaude(
+      `Which topic should this go under — "${draft.title}"?${body}\n\nMy existing topics: ${list}.\n\n` +
+      `Recommend one (or a new topic name if none fit), in one short sentence.`
+    )
+  }
+
+  if (expanded) {
+    return (
+      <NoteComposer
+        title={draft.title}
+        onTitleChange={(v) => setDraft({ ...draft, title: v })}
+        content={draft.content}
+        onContentChange={(v) => setDraft({ ...draft, content: v })}
+        onClose={() => setExpanded(false)}
+      />
+    )
+  }
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -57,6 +93,8 @@ export function ItemEditor({ item, onClose }) {
           <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
+        {item.archived && <div className="item-editor-archived-banner">Archived</div>}
+
         {item.question && (
           <div className="item-editor-question">
             <strong>Question asked:</strong> {item.question}
@@ -64,22 +102,40 @@ export function ItemEditor({ item, onClose }) {
         )}
 
         {item.type === 'todo' && (
-          <label className="item-editor-done">
-            <input
-              type="checkbox"
-              checked={draft.done}
-              onChange={(e) => setDraft({ ...draft, done: e.target.checked })}
-            />
-            Done
-          </label>
+          <div className="item-editor-todo-row">
+            <label className="item-editor-done">
+              <input
+                type="checkbox"
+                checked={draft.done}
+                onChange={(e) => setDraft({ ...draft, done: e.target.checked })}
+              />
+              Done
+            </label>
+            <label className="item-editor-due">
+              Due
+              <input
+                type="date"
+                value={draft.dueAt ? toDateInputValue(draft.dueAt) : ''}
+                onChange={(e) => setDraft({ ...draft, dueAt: e.target.value ? new Date(e.target.value).getTime() : null })}
+              />
+              {draft.dueAt && (
+                <button type="button" className="btn-link" onClick={() => setDraft({ ...draft, dueAt: null })}>Clear</button>
+              )}
+            </label>
+          </div>
         )}
 
-        <input
-          className="item-editor-title"
-          value={draft.title}
-          onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-          placeholder="Title"
-        />
+        <div className="item-editor-title-row">
+          <input
+            className="item-editor-title"
+            value={draft.title}
+            onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+            placeholder="Title"
+          />
+          <button type="button" className="btn-secondary btn-small" onClick={() => setExpanded(true)} title="Expand to a larger editor">
+            ⤢ Expand
+          </button>
+        </div>
 
         <textarea
           className="item-editor-content"
@@ -107,8 +163,19 @@ export function ItemEditor({ item, onClose }) {
           </label>
         </div>
 
+        {draft.topicId === 'unsorted' && (
+          <button type="button" className="btn-link" onClick={askToCategorize}>Ask Claude to suggest a topic</button>
+        )}
+
         <div className="modal-footer">
-          <button className="btn-danger" onClick={remove}>Delete</button>
+          {item.archived ? (
+            <>
+              <button className="btn-danger" onClick={removePermanently}>Delete permanently</button>
+              <button className="btn-secondary" onClick={restore}>Restore</button>
+            </>
+          ) : (
+            <button className="btn-secondary" onClick={archive}>Archive</button>
+          )}
           {item.type !== 'answer' && (
             <button className="btn-secondary" onClick={askAboutThis}>Ask Claude about this</button>
           )}
@@ -125,4 +192,10 @@ function headerLabel(type) {
   if (type === 'answer') return 'Saved Claude answer'
   if (type === 'todo') return 'To-do'
   return 'Note'
+}
+
+function toDateInputValue(ts) {
+  const d = new Date(ts)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }

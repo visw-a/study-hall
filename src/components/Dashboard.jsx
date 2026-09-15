@@ -1,29 +1,33 @@
 import { useMemo } from 'react'
 import { useStore } from '../store/StoreContext.jsx'
 import { kindLabel } from './ItemCard.jsx'
+import { describeDue } from '../lib/dates.js'
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000
 
 export function Dashboard() {
-  const { items, topics, askClaude } = useStore()
+  const { activeItems, topics, askClaude } = useStore()
 
   const stats = useMemo(() => {
     const now = Date.now()
     const weekAgo = now - WEEK_MS
-    const addedThisWeek = items.filter((it) => it.createdAt >= weekAgo)
-    const unsorted = items.filter((it) => it.topicId === 'unsorted')
-    const savedAnswers = items.filter((it) => it.type === 'answer')
-    const notes = items.filter((it) => it.type === 'note')
-    const openTodos = items.filter((it) => it.type === 'todo' && !it.done)
-    const recent = [...items].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6)
+    const addedThisWeek = activeItems.filter((it) => it.createdAt >= weekAgo)
+    const unsorted = activeItems.filter((it) => it.topicId === 'unsorted')
+    const savedAnswers = activeItems.filter((it) => it.type === 'answer')
+    const notes = activeItems.filter((it) => it.type === 'note')
+    const openTodos = activeItems.filter((it) => it.type === 'todo' && !it.done)
+    const dueSoon = openTodos
+      .filter((it) => it.dueAt && describeDue(it.dueAt)?.dueSoon)
+      .sort((a, b) => a.dueAt - b.dueAt)
+    const recent = [...activeItems].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6)
 
     const perTopic = topics
       .filter((t) => t.id !== 'unsorted')
-      .map((t) => ({ topic: t, count: items.filter((it) => it.topicId === t.id).length }))
+      .map((t) => ({ topic: t, count: activeItems.filter((it) => it.topicId === t.id).length }))
       .sort((a, b) => b.count - a.count)
 
-    return { addedThisWeek, unsorted, savedAnswers, notes, openTodos, recent, perTopic }
-  }, [items, topics])
+    return { addedThisWeek, unsorted, savedAnswers, notes, openTodos, dueSoon, recent, perTopic }
+  }, [activeItems, topics])
 
   function quizMe() {
     const week = stats.addedThisWeek
@@ -48,7 +52,7 @@ export function Dashboard() {
       <h1>Dashboard</h1>
 
       <div className="stat-grid">
-        <StatTile label="Total items" value={items.length} />
+        <StatTile label="Total items" value={activeItems.length} />
         <StatTile label="Notes" value={stats.notes.length} />
         <StatTile label="Open to-dos" value={stats.openTodos.length} />
         <StatTile label="Saved from Claude" value={stats.savedAnswers.length} />
@@ -65,6 +69,24 @@ export function Dashboard() {
           Help me sort {stats.unsorted.length || ''} unsorted item{stats.unsorted.length === 1 ? '' : 's'}
         </button>
       </div>
+
+      {stats.dueSoon.length > 0 && (
+        <section className="dashboard-due-soon">
+          <h2>Due soon</h2>
+          <ul className="recent-list">
+            {stats.dueSoon.map((item) => {
+              const due = describeDue(item.dueAt)
+              return (
+                <li key={item.id}>
+                  <span className={`item-kind item-kind-todo`}>To-do</span>
+                  <span className="recent-title">{item.title}</span>
+                  <span className={`recent-date${due.overdue ? ' recent-date-overdue' : ''}`}>{due.label}</span>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
 
       <div className="dashboard-columns">
         <section>

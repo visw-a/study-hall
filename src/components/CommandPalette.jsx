@@ -8,7 +8,7 @@ import { VIEWS } from '../registry.js'
 // Cmd/Ctrl+K anywhere in the app: jump straight to a view or to any item by
 // title/content/tag, without clicking through nav + search + filters.
 export function CommandPalette({ onNavigate }) {
-  const { items, topics } = useStore()
+  const { activeItems, topics } = useStore()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(0)
@@ -44,9 +44,9 @@ export function CommandPalette({ onNavigate }) {
   }, [query])
 
   const itemResults = useMemo(() => {
-    if (!query.trim()) return items.slice(0, 6).sort((a, b) => b.updatedAt - a.updatedAt)
-    return searchItems(items, query).slice(0, 8).map((r) => r.item)
-  }, [items, query])
+    if (!query.trim()) return activeItems.slice(0, 6).sort((a, b) => b.updatedAt - a.updatedAt)
+    return searchItems(activeItems, query).slice(0, 8).map((r) => r.item)
+  }, [activeItems, query])
 
   const results = useMemo(
     () => [

@@ -115,6 +115,8 @@ h1, h2, h3 { margin: 0 0 0.5em 0; }
 }
 
 .view h1 { font-size: 1.5rem; }
+.view-header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.view-header-row h1 { margin: 0; }
 
 /* Chat sidebar */
 .chat-sidebar {
@@ -211,9 +213,17 @@ h1, h2, h3 { margin: 0 0 0.5em 0; }
 .btn-danger { background: var(--danger-dim); color: var(--danger); border-color: transparent; }
 .btn-link { background: none; border: none; color: var(--accent); padding: 0; font-size: 0.8rem; }
 .btn-small { padding: 5px 10px; font-size: 0.78rem; }
+.btn-secondary.active { background: var(--accent-dim); color: var(--accent); border-color: transparent; }
 
 /* Quick capture */
 .quick-capture { margin-bottom: 20px; }
+.quick-capture-textarea-wrap { position: relative; }
+.quick-capture-expand {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text-dim); font-size: 0.72rem; padding: 3px 7px; cursor: pointer;
+}
+.quick-capture-expand:hover { color: var(--text); border-color: var(--accent); }
 .quick-capture textarea {
   width: 100%;
   padding: 12px;
@@ -224,7 +234,7 @@ h1, h2, h3 { margin: 0 0 0.5em 0; }
   resize: vertical;
 }
 .quick-capture-row { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
-.quick-capture-toast { color: var(--text-dim); font-size: 0.85rem; }
+.quick-capture-toast { color: var(--text-dim); font-size: 0.85rem; display: flex; align-items: center; gap: 10px; }
 
 /* Library controls */
 .library-controls { display: flex; gap: 10px; margin: 18px 0 8px; flex-wrap: wrap; }
@@ -354,6 +364,63 @@ mark { background: var(--accent-dim); color: var(--accent); font-weight: 700; bo
 .item-editor-row label { flex: 1; display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-dim); }
 .item-editor-tags { flex: 2; }
 .item-editor-done { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+.item-editor-todo-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.item-editor-due { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-dim); }
+.item-editor-due input[type="date"] {
+  width: auto; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--panel-alt); color: var(--text); font-size: 0.85rem;
+}
+.item-editor-title-row { display: flex; gap: 8px; align-items: center; }
+.item-editor-title-row .item-editor-title { flex: 1; }
+.item-editor-archived-banner {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-dim); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px;
+  align-self: flex-start;
+}
+
+/* Note composer (expanded, half-screen editor) */
+.composer {
+  background: var(--panel);
+  border-radius: 14px;
+  width: min(70vw, 900px);
+  min-width: min(50vw, 480px);
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 20px 12px;
+}
+.composer-toolbar { display: flex; align-items: center; gap: 14px; }
+.composer-toolbar-group { display: flex; align-items: center; gap: 4px; }
+.composer-toolbar-group button:not(.btn-secondary) {
+  width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--panel-alt); color: var(--text); cursor: pointer; font-size: 0.85rem;
+}
+.composer-toolbar-group button:not(.btn-secondary):hover { border-color: var(--accent); }
+.composer-toolbar .modal-close { margin-left: auto; }
+.composer-error {
+  font-size: 0.8rem; color: var(--text); font-weight: 600; background: var(--panel-alt);
+  border-radius: 6px; padding: 6px 10px;
+}
+.composer-title { font-size: 1rem; font-weight: 600; }
+.composer-textarea {
+  flex: 1;
+  width: 100%;
+  resize: none;
+  padding: 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--panel-alt);
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.composer-textarea:focus { outline: none; border-color: var(--accent); }
+.composer-footer { color: var(--text-dim); font-size: 0.72rem; }
+
+@media (max-width: 900px) {
+  .composer { width: 100%; min-width: 0; height: 90vh; }
+}
 
 /* To-Dos view */
 .todo-add-row { display: flex; gap: 10px; margin-bottom: 14px; }
@@ -378,6 +445,8 @@ mark { background: var(--accent-dim); color: var(--accent); font-weight: 700; bo
   font-size: 0.9rem; color: var(--text); padding: 0;
 }
 .todo-row-done .todo-title { color: var(--text-dim); text-decoration: line-through; }
+.todo-due { font-size: 0.72rem; color: var(--text-dim); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; flex-shrink: 0; }
+.todo-due-overdue { color: var(--text); font-weight: 700; border-color: var(--text); }
 .todo-delete { color: var(--text-dim); opacity: 0; transition: opacity 0.1s; }
 .todo-row:hover .todo-delete, .todo-row:focus-within .todo-delete { opacity: 1; }
 .item-title-done { color: var(--text-dim); text-decoration: line-through; }
@@ -415,6 +484,9 @@ mark { background: var(--accent-dim); color: var(--accent); font-weight: 700; bo
 
 .dashboard-actions { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
 
+.dashboard-due-soon { margin-bottom: 24px; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.dashboard-due-soon h2 { margin-top: 0; }
+
 .dashboard-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .topic-bar-list, .recent-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .topic-bar-list li, .recent-list li { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
@@ -422,6 +494,7 @@ mark { background: var(--accent-dim); color: var(--accent); font-weight: 700; bo
 .topic-bar-count { color: var(--text-dim); }
 .recent-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recent-date { color: var(--text-dim); font-size: 0.75rem; }
+.recent-date-overdue { color: var(--text); font-weight: 700; }
 
 /* Settings */
 .settings-section { border-top: 1px solid var(--border); padding-top: 14px; }

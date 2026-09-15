@@ -22,6 +22,10 @@ export function StoreProvider({ children }) {
   useEffect(() => { store.setChat(chat) }, [chat])
   useEffect(() => { store.setSettings(settings) }, [settings])
 
+  // Items with the archived ones hidden — what every view/search/count
+  // should use unless it's specifically showing the archive.
+  const activeItems = useMemo(() => items.filter((it) => !it.archived), [items])
+
   // ---- Items -----------------------------------------------------------
 
   const addItem = useCallback((input) => {
@@ -30,7 +34,7 @@ export function StoreProvider({ children }) {
     let topicId = input.topicId
     let autoFiled = false
     if (!topicId) {
-      const suggestion = suggestTopic(text, store.getTopics(), store.getItems())
+      const suggestion = suggestTopic(text, store.getTopics(), store.getItems().filter((it) => !it.archived))
       topicId = suggestion.topicId || 'unsorted'
       autoFiled = Boolean(suggestion.topicId)
     }
@@ -45,6 +49,9 @@ export function StoreProvider({ children }) {
       autoFiled,
       // Only meaningful for type 'todo'; harmless on other kinds.
       done: input.type === 'todo' ? Boolean(input.done) : undefined,
+      dueAt: input.type === 'todo' ? input.dueAt || null : undefined,
+      notifiedAt: null,
+      archived: false,
       createdAt: now,
       updatedAt: now,
     }
@@ -64,8 +71,65 @@ export function StoreProvider({ children }) {
     )
   }, [])
 
+  // Archiving is the default, reversible way to get an item out of view —
+  // "Delete" (below) is the separate, permanent action, only reachable from
+  // the Archived list so it's never one accidental click away.
+  const archiveItem = useCallback((id) => {
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, archived: true, updatedAt: Date.now() } : it)))
+  }, [])
+
+  const restoreItem = useCallback((id) => {
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, archived: false, updatedAt: Date.now() } : it)))
+  }, [])
+
   const deleteItem = useCallback((id) => {
     setItems((prev) => prev.filter((it) => it.id !== id))
+  }, [])
+
+  // ---- Due-date reminders ------------------------------------------------
+  //
+  // Best-effort only: this is a static, backend-less app, so a reminder can
+  // only fire while this tab is open (via the Notification API) — there's
+  // no server to push a notification after the tab or browser is closed.
+  // Checked every 30s; each overdue to-do notifies once (`notifiedAt`).
+
+  const [reminderPermission, setReminderPermission] = useState(
+    () => (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported')
+  )
+
+  const requestReminderPermission = useCallback(async () => {
+    if (typeof Notification === 'undefined') return 'unsupported'
+    const result = await Notification.requestPermission()
+    setReminderPermission(result)
+    return result
+  }, [])
+
+  useEffect(() => {
+    if (typeof Notification === 'undefined') return
+    const check = () => {
+      if (Notification.permission !== 'granted') return
+      const now = Date.now()
+      setItems((prev) => {
+        let changed = false
+        const next = prev.map((it) => {
+          if (it.type === 'todo' && !it.done && !it.archived && it.dueAt && it.dueAt <= now && !it.notifiedAt) {
+            changed = true
+            try {
+              new Notification('Study Hall — to-do due', { body: it.title, tag: it.id })
+            } catch {
+              // Notification construction can fail (e.g. unsupported in this
+              // context) — the due-date UI elsewhere still shows it as overdue.
+            }
+            return { ...it, notifiedAt: now }
+          }
+          return it
+        })
+        return changed ? next : prev
+      })
+    }
+    check()
+    const interval = setInterval(check, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   // ---- Topics ------------------------------------------------------------
@@ -110,7 +174,7 @@ export function StoreProvider({ children }) {
     const idx = chat.findIndex((m) => m.id === messageId)
     const precedingUser = [...chat.slice(0, idx)].reverse().find((m) => m.role === 'user')
 
-    const suggestion = suggestTopic(message.content, topics, items)
+    const suggestion = suggestTopic(message.content, topics, activeItems)
     const item = addItem({
       type: 'answer',
       title: overrides.title || (precedingUser ? truncateTitle(precedingUser.content) : 'Saved answer'),
@@ -121,7 +185,7 @@ export function StoreProvider({ children }) {
     })
     updateChatMessage(messageId, { savedItemId: item.id })
     return item
-  }, [chat, addItem, updateChatMessage])
+  }, [chat, topics, activeItems, addItem, updateChatMessage])
 
   const askClaude = useCallback(async (promptText) => {
     const trimmed = promptText.trim()
@@ -141,7 +205,7 @@ export function StoreProvider({ children }) {
     setChatError(null)
     try {
       const history = [...chat, userMessage].map((m) => ({ role: m.role, content: m.content }))
-      await streamChat(history, settings, items, (textSoFar) => {
+      await streamChat(history, settings, activeItems, (textSoFar) => {
         updateChatMessage(assistantMessage.id, { content: textSoFar })
       })
     } catch (err) {
@@ -150,7 +214,7 @@ export function StoreProvider({ children }) {
     } finally {
       setChatLoading(false)
     }
-  }, [chatLoading, addChatMessage, updateChatMessage, chat, settings, items])
+  }, [chatLoading, addChatMessage, updateChatMessage, chat, settings, activeItems])
 
   const clearChat = useCallback(() => setChat([]), [])
 
@@ -173,14 +237,17 @@ export function StoreProvider({ children }) {
   }, [])
 
   const value = useMemo(() => ({
-    items, topics, chat, settings, chatLoading, chatError,
-    addItem, updateItem, deleteItem, toggleTodo,
+    items, activeItems, topics, chat, settings, chatLoading, chatError,
+    reminderPermission, requestReminderPermission,
+    addItem, updateItem, deleteItem, archiveItem, restoreItem, toggleTodo,
     addTopic, updateTopic, deleteTopic,
     addChatMessage, updateChatMessage, saveMessageToLibrary,
     askClaude, clearChat,
     updateSettings,
     exportData, importData,
-  }), [items, topics, chat, settings, chatLoading, chatError, addItem, updateItem, deleteItem, toggleTodo,
+  }), [items, activeItems, topics, chat, settings, chatLoading, chatError,
+      reminderPermission, requestReminderPermission,
+      addItem, updateItem, deleteItem, archiveItem, restoreItem, toggleTodo,
       addTopic, updateTopic, deleteTopic, addChatMessage, updateChatMessage,
       saveMessageToLibrary, askClaude, clearChat, updateSettings, exportData, importData])
 
